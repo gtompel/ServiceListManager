@@ -1,9 +1,10 @@
-import { Column } from "../types";
+import { Column, Id } from "../types";
 interface Props {
     column: Column;
+    deleteColumn: (id: Id) => void;
 }
 function ColumnContainer(props: Props) {
-    const {column} = props;
+    const {column, deleteColumn} = props;
   return (
     <div className="
     bg-columnBackgroundColor
@@ -26,6 +27,9 @@ function ColumnContainer(props: Props) {
         font-bold
         border-columnBackgroundColor
         border-4
+        flex
+        justify-between
+        items-center
         ">
             <div className="
             flex
@@ -43,7 +47,33 @@ function ColumnContainer(props: Props) {
         ">0</div>
         {column.title}
         </div>
+        <button
+        onClick={()=>{
+          deleteColumn(column.id);
+        }}
+        className="
+        stroke-gray-500
+        hover:stroke-white
+        hover:bg-columnBackgroundColor
+        rounded
+        px-1
+        py-2
+        ">-</button>
         </div>
+        <button className="
+        h-[60px]
+        w-[350px]
+        min-w-[350px]
+        cursor-pointer
+        rounded-lg
+        bg-mainBackgroundColor
+        border-2
+        border-columnBackgroundColor
+        p-4
+        ring-rose-500
+        hover:ring-2
+        flex
+        gap-2">+</button>
         {/* Column task container */}
         <div className="flex flex-grow">Content</div>
         {/* Column footer */}
