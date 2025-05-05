@@ -11,9 +11,20 @@ type CategoryWithDetails = {
 type TagWithDetails = {
   tag: Tag
 }
+type UserMinimal = {
+  id: string;
+  name: string | null;
+  email?: string;
+  password?: string;
+  bio?: string | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+  image: string | null;
+};
+
 
 type PostWithRelations = Post & {
-  author: User
+  author: UserMinimal
   categories: CategoryWithDetails[]
   tags: TagWithDetails[]
   _count: { comments: number }
