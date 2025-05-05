@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  image         String?
+  bio           String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  posts         Post[]
+  comments      Comment[]
+
+  @@map("users")
+}
+
+model Post {
+  id          String       @id @default(cuid())
+  title       String
+  slug        String       @unique
+  content     String
+  excerpt     String?
+  published   Boolean      @default(false)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+  comments    Comment[]
+  categories  CategoryOnPost[]
+  tags        TagOnPost[]
+
+  @@map("posts")
+}
+
+model Category {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  slug        String       @unique
+  description String?
+  posts       CategoryOnPost[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  slug        String       @unique
+  posts       TagOnPost[]
+
+  @@map("tags")
+}
+
+model Comment {
+  id          String       @id @default(cuid())
+  content     String
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+  post        Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+
+  @@map("comments")
+}
+
+// Связующие таблицы для отношений многие-ко-многим
+model CategoryOnPost {
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId  String
+  assignedAt  DateTime  @default(now())
+
+  @@id([postId, categoryId])
+  @@map("categories_on_posts")
+}
+
+model TagOnPost {
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  tag         Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId       String
+  assignedAt  DateTime  @default(now())
+
+  @@id([postId, tagId])
+  @@map("tags_on_posts")
+}
