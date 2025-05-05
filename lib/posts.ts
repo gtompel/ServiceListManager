@@ -11,7 +11,13 @@ export async function getPosts(limit = 10) {
         createdAt: "desc",
       },
       include: {
-        author: true,
+        author: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
         categories: {
           include: {
             category: true,
@@ -43,7 +49,14 @@ export async function getPostBySlug(slug: string) {
         published: true,
       },
       include: {
-        author: true,
+        author: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            bio: true,
+          },
+        },
         categories: {
           include: {
             category: true,
@@ -59,7 +72,13 @@ export async function getPostBySlug(slug: string) {
             createdAt: "desc",
           },
           include: {
-            author: true,
+            author: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
           },
         },
       },
@@ -88,7 +107,13 @@ export async function getPostsByCategory(categorySlug: string, limit = 10) {
         createdAt: "desc",
       },
       include: {
-        author: true,
+        author: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
         categories: {
           include: {
             category: true,
@@ -130,7 +155,13 @@ export async function getPostsByTag(tagSlug: string, limit = 10) {
         createdAt: "desc",
       },
       include: {
-        author: true,
+        author: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
         categories: {
           include: {
             category: true,
@@ -150,6 +181,46 @@ export async function getPostsByTag(tagSlug: string, limit = 10) {
     })
   } catch (error) {
     console.error("Ошибка при получении публикаций по тегу:", error)
+    return []
+  }
+}
+
+export async function getAllCategories() {
+  try {
+    return await prisma.category.findMany({
+      orderBy: {
+        name: "asc",
+      },
+      include: {
+        _count: {
+          select: {
+            posts: true,
+          },
+        },
+      },
+    })
+  } catch (error) {
+    console.error("Ошибка при получении категорий:", error)
+    return []
+  }
+}
+
+export async function getAllTags() {
+  try {
+    return await prisma.tag.findMany({
+      orderBy: {
+        name: "asc",
+      },
+      include: {
+        _count: {
+          select: {
+            posts: true,
+          },
+        },
+      },
+    })
+  } catch (error) {
+    console.error("Ошибка при получении тегов:", error)
     return []
   }
 }

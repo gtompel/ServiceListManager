@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed": "npx ts-node lib/db-seed.ts"
   },
   "dependencies": {
     "@auth/core": "^0.39.0",

@@ -7,6 +7,7 @@ import { slugify } from "./utils"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { hash } from "bcryptjs"
+
 export async function registerUser(name: string, email: string, password: string) {
   // Проверяем, существует ли пользователь с таким email
   const existingUser = await prisma.user.findUnique({
@@ -41,7 +42,7 @@ export async function createPost(formData: FormData) {
 
   const title = formData.get("title") as string
   const content = formData.get("content") as string
-  const excerpt = formData.get("excerpt") as string
+  const excerpt = (formData.get("excerpt") as string) || content.substring(0, 150) + "..."
   const published = formData.get("published") === "true"
 
   // Получаем ID категорий и тегов из формы
@@ -112,7 +113,7 @@ export async function updatePost(postId: string, formData: FormData) {
 
   const title = formData.get("title") as string
   const content = formData.get("content") as string
-  const excerpt = formData.get("excerpt") as string
+  const excerpt = (formData.get("excerpt") as string) || content.substring(0, 150) + "..."
   const published = formData.get("published") === "true"
 
   // Получаем ID категорий и тегов из формы
@@ -190,7 +191,6 @@ export async function deletePost(postId: string) {
     throw new Error("Вы должны войти в систему для удаления публикации")
   }
 
-
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
   })
@@ -225,6 +225,7 @@ export async function deletePost(postId: string) {
     throw new Error("Не удалось удалить публикацию")
   }
 }
+
 export async function createComment(postId: string, content: string) {
   const session = await getServerSession(authOptions)
 
@@ -255,5 +256,74 @@ export async function createComment(postId: string, content: string) {
   } catch (error) {
     console.error("Ошибка при создании комментария:", error)
     throw new Error("Не удалось создать комментарий")
+  }
+}
+
+export async function createCategory(name: string, description: string) {
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user?.email) {
+    throw new Error("Вы должны войти в систему для создания категории")
+  }
+
+  const slug = slugify(name)
+
+  // Проверяем, существует ли уже категория с таким slug
+  const existingCategory = await prisma.category.findUnique({
+    where: { slug },
+  })
+
+  if (existingCategory) {
+    throw new Error("Категория с таким названием уже существует")
+  }
+
+  try {
+    const category = await prisma.category.create({
+      data: {
+        name,
+        slug,
+        description,
+      },
+    })
+
+    revalidatePath("/categories")
+    return category
+  } catch (error) {
+    console.error("Ошибка при создании категории:", error)
+    throw new Error("Не удалось создать категорию")
+  }
+}
+
+export async function createTag(name: string) {
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user?.email) {
+    throw new Error("Вы должны войти в систему для создания тега")
+  }
+
+  const slug = slugify(name)
+
+  // Проверяем, существует ли уже тег с таким slug
+  const existingTag = await prisma.tag.findUnique({
+    where: { slug },
+  })
+
+  if (existingTag) {
+    throw new Error("Тег с таким названием уже существует")
+  }
+
+  try {
+    const tag = await prisma.tag.create({
+      data: {
+        name,
+        slug,
+      },
+    })
+
+    revalidatePath("/tags")
+    return tag
+  } catch (error) {
+    console.error("Ошибка при создании тега:", error)
+    throw new Error("Не удалось создать тег")
   }
 }
