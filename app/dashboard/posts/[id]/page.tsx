@@ -5,10 +5,13 @@ import { prisma } from "@/lib/prisma"
 import PostForm from "@/components/PostForm"
 
 export default async function EditPostPage({ params }: { params: { id: string } }) {
+  // Дожидаемся params перед использованием его свойств
+  const id = params.id
+
   const session = await getServerSession(authOptions)
 
   if (!session?.user?.email) {
-    redirect("/login?callbackUrl=/dashboard/posts/" + params.id)
+    redirect("/login?callbackUrl=/dashboard/posts/" + id)
   }
 
   const user = await prisma.user.findUnique({
@@ -20,7 +23,7 @@ export default async function EditPostPage({ params }: { params: { id: string } 
   }
 
   const post = await prisma.post.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       categories: true,
       tags: true,

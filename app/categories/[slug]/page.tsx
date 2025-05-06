@@ -3,12 +3,9 @@ import { prisma } from "@/lib/prisma"
 import PostList from "@/components/PostList"
 import { notFound } from "next/navigation"
 
-// Исправляем ошибку с params.slug
-// Хотя params обычно не является промисом, Next.js выдает ошибку,
-// поэтому добавим await перед использованием params
 export default async function CategoryPage({ params }: { params: { slug: string } }) {
-  // Получаем slug из параметров и явно ожидаем его
-  const { slug } = await Promise.resolve(params)
+  // Дожидаемся params перед использованием его свойств
+  const slug = params.slug
 
   // Получаем категорию
   const category = await prisma.category.findUnique({

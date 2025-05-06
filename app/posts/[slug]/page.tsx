@@ -37,7 +37,7 @@ export default async function PostPage({ params }: { params: { slug: string } })
 
       <section className="mt-12 border-t pt-8">
         <h2 className="text-2xl font-bold mb-6">Комментарии</h2>
-        {post.comments && <CommentList comments={post.comments} />}
+        {post.comments && <CommentList comments={post.comments as any} />}
         <div className="mt-8">
           <h3 className="text-xl font-semibold mb-4">Оставить комментарий</h3>
           <CommentForm postId={post.id} />

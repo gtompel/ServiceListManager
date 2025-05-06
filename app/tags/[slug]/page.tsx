@@ -3,10 +3,9 @@ import { prisma } from "@/lib/prisma"
 import PostList from "@/components/PostList"
 import { notFound } from "next/navigation"
 
-// Аналогично исправляем ошибку с params.slug в маршруте тегов
 export default async function TagPage({ params }: { params: { slug: string } }) {
-  // Получаем slug из параметров и явно ожидаем его
-  const { slug } = await Promise.resolve(params)
+  // Дожидаемся params перед использованием его свойств
+  const slug = await params.slug
 
   // Получаем тег
   const tag = await prisma.tag.findUnique({

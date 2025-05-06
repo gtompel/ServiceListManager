@@ -60,6 +60,12 @@ export function UserNav() {
           <Link href="/dashboard">Панель управления</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
+          <Link href="/dashboard/posts">Публикации</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/drafts">Черновики</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link href="/dashboard/posts/new">Создать публикацию</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 
-export default function LoginForm() {
+function LoginFormContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") || "/"
@@ -93,5 +93,22 @@ export default function LoginForm() {
         </p>
       </div>
     </form>
+  )
+}
+
+export default function LoginForm() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-4 animate-pulse">
+          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-10 bg-gray-300 rounded"></div>
+          <div className="h-6 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        </div>
+      }
+    >
+      <LoginFormContent />
+    </Suspense>
   )
 }

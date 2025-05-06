@@ -34,8 +34,6 @@ export async function getPosts(limit = 10) {
           },
         },
       },
-      // Добавляем опцию, чтобы избежать кэширования
-      cacheStrategy: { ttl: 0 } as any,
     })
   } catch (error) {
     console.error("Ошибка при получении публикаций:", error)
@@ -84,7 +82,6 @@ export async function getPostBySlug(slug: string) {
           },
         },
       },
-
     })
   } catch (error) {
     console.error("Ошибка при получении публикации:", error)
@@ -187,6 +184,7 @@ export async function getPostsByTag(tagSlug: string, limit = 10) {
     return []
   }
 }
+
 export async function getAllCategories() {
   try {
     return await prisma.category.findMany({
@@ -224,5 +222,95 @@ export async function getAllTags() {
   } catch (error) {
     console.error("Ошибка при получении тегов:", error)
     return []
+  }
+}
+
+// Добавляем функцию для получения черновиков пользователя
+export async function getUserDrafts(userId: string) {
+  try {
+    return await prisma.post.findMany({
+      where: {
+        authorId: userId,
+        published: false,
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+      include: {
+        categories: {
+          include: {
+            category: true,
+          },
+        },
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
+      },
+    })
+  } catch (error) {
+    console.error("Ошибка при получении черновиков:", error)
+    return []
+  }
+}
+
+// Добавляем функцию для получения поста по ID (включая черновики)
+export async function getPostById(id: string, userId?: string) {
+  try {
+    const post = await prisma.post.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            bio: true,
+          },
+        },
+        categories: {
+          include: {
+            category: true,
+          },
+        },
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+        comments: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    // Если пост не опубликован, проверяем, принадлежит ли он пользователю
+    if (post && !post.published && post.authorId !== userId) {
+      return null
+    }
+
+    return post
+  } catch (error) {
+    console.error("Ошибка при получении публикации:", error)
+    return null
   }
 }

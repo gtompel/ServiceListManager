@@ -57,7 +57,6 @@ export async function updateProfile(name: string, bio: string | null, image: str
   }
 }
 
-// Исправляем функцию createPost, чтобы публикации корректно отображались
 export async function createPost(formData: FormData) {
   const session = await getServerSession(authOptions)
 
@@ -119,35 +118,11 @@ export async function createPost(formData: FormData) {
       },
     })
 
-    // Более агрессивная ревалидация путей
-    revalidatePath("/", "layout")
-    revalidatePath("/posts", "layout")
-    revalidatePath("/dashboard", "layout")
-    revalidatePath("/dashboard/posts", "layout")
-    revalidatePath(`/posts/${post.slug}`, "layout")
-    revalidatePath("/categories", "layout")
-    revalidatePath("/tags", "layout")
-
-    // Ревалидация для каждой категории и тега
-    for (const categoryId of categoryIds) {
-      const category = await prisma.category.findUnique({
-        where: { id: categoryId },
-        select: { slug: true },
-      })
-      if (category) {
-        revalidatePath(`/categories/${category.slug}`, "layout")
-      }
-    }
-
-    for (const tagId of tagIds) {
-      const tag = await prisma.tag.findUnique({
-        where: { id: tagId },
-        select: { slug: true },
-      })
-      if (tag) {
-        revalidatePath(`/tags/${tag.slug}`, "layout")
-      }
-    }
+    revalidatePath("/")
+    revalidatePath("/posts")
+    revalidatePath("/dashboard")
+    revalidatePath("/dashboard/posts")
+    revalidatePath("/dashboard/drafts")
 
     return post
   } catch (error) {
@@ -156,7 +131,6 @@ export async function createPost(formData: FormData) {
   }
 }
 
-// Аналогично обновляем функцию updatePost для более агрессивной ревалидации
 export async function updatePost(postId: string, formData: FormData) {
   const session = await getServerSession(authOptions)
 
@@ -185,16 +159,8 @@ export async function updatePost(postId: string, formData: FormData) {
   const post = await prisma.post.findUnique({
     where: { id: postId },
     include: {
-      categories: {
-        include: {
-          category: true,
-        },
-      },
-      tags: {
-        include: {
-          tag: true,
-        },
-      },
+      categories: true,
+      tags: true,
     },
   })
 
@@ -234,50 +200,122 @@ export async function updatePost(postId: string, formData: FormData) {
       },
     })
 
-    // Более агрессивная ревалидация путей
-    revalidatePath("/", "layout")
-    revalidatePath("/posts", "layout")
-    revalidatePath(`/posts/${post.slug}`, "layout")
-    revalidatePath("/dashboard", "layout")
-    revalidatePath("/dashboard/posts", "layout")
-    revalidatePath(`/dashboard/posts/${postId}`, "layout")
-    revalidatePath("/categories", "layout")
-    revalidatePath("/tags", "layout")
-
-    // Ревалидация для старых категорий и тегов
-    for (const categoryItem of post.categories) {
-      revalidatePath(`/categories/${categoryItem.category.slug}`, "layout")
-    }
-
-    for (const tagItem of post.tags) {
-      revalidatePath(`/tags/${tagItem.tag.slug}`, "layout")
-    }
-
-    // Ревалидация для новых категорий и тегов
-    for (const categoryId of categoryIds) {
-      const category = await prisma.category.findUnique({
-        where: { id: categoryId },
-        select: { slug: true },
-      })
-      if (category) {
-        revalidatePath(`/categories/${category.slug}`, "layout")
-      }
-    }
-
-    for (const tagId of tagIds) {
-      const tag = await prisma.tag.findUnique({
-        where: { id: tagId },
-        select: { slug: true },
-      })
-      if (tag) {
-        revalidatePath(`/tags/${tag.slug}`, "layout")
-      }
-    }
+    revalidatePath("/")
+    revalidatePath("/posts")
+    revalidatePath(`/posts/${post.slug}`)
+    revalidatePath("/dashboard")
+    revalidatePath("/dashboard/posts")
+    revalidatePath("/dashboard/drafts")
+    revalidatePath(`/dashboard/posts/${postId}`)
 
     return updatedPost
   } catch (error) {
     console.error("Ошибка при обновлении публикации:", error)
     throw new Error("Не удалось обновить публикацию")
+  }
+}
+
+// Добавляем функцию для публикации черновика
+export async function publishPost(postId: string) {
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user?.email) {
+    throw new Error("Вы должны войти в систему для публикации")
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  })
+
+  if (!user) {
+    throw new Error("Пользователь не найден")
+  }
+
+  // Проверяем, принадлежит ли публикация пользователю
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+  })
+
+  if (!post) {
+    throw new Error("Публикация не найдена")
+  }
+
+  if (post.authorId !== user.id) {
+    throw new Error("У вас нет прав для публикации этой записи")
+  }
+
+  try {
+    const updatedPost = await prisma.post.update({
+      where: { id: postId },
+      data: {
+        published: true,
+      },
+    })
+
+    revalidatePath("/")
+    revalidatePath("/posts")
+    revalidatePath(`/posts/${post.slug}`)
+    revalidatePath("/dashboard")
+    revalidatePath("/dashboard/posts")
+    revalidatePath("/dashboard/drafts")
+    revalidatePath(`/dashboard/posts/${postId}`)
+
+    return updatedPost
+  } catch (error) {
+    console.error("Ошибка при публикации:", error)
+    throw new Error("Не удалось опубликовать запись")
+  }
+}
+
+// Добавляем функцию для отмены публикации (перевод в черновики)
+export async function unpublishPost(postId: string) {
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user?.email) {
+    throw new Error("Вы должны войти в систему для отмены публикации")
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  })
+
+  if (!user) {
+    throw new Error("Пользователь не найден")
+  }
+
+  // Проверяем, принадлежит ли публикация пользователю
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+  })
+
+  if (!post) {
+    throw new Error("Публикация не найдена")
+  }
+
+  if (post.authorId !== user.id) {
+    throw new Error("У вас нет прав для отмены публикации этой записи")
+  }
+
+  try {
+    const updatedPost = await prisma.post.update({
+      where: { id: postId },
+      data: {
+        published: false,
+      },
+    })
+
+    revalidatePath("/")
+    revalidatePath("/posts")
+    revalidatePath(`/posts/${post.slug}`)
+    revalidatePath("/dashboard")
+    revalidatePath("/dashboard/posts")
+    revalidatePath("/dashboard/drafts")
+    revalidatePath(`/dashboard/posts/${postId}`)
+
+    return updatedPost
+  } catch (error) {
+    console.error("Ошибка при отмене публикации:", error)
+    throw new Error("Не удалось отменить публикацию")
   }
 }
 
@@ -317,6 +355,7 @@ export async function deletePost(postId: string) {
     revalidatePath("/posts")
     revalidatePath("/dashboard")
     revalidatePath("/dashboard/posts")
+    revalidatePath("/dashboard/drafts")
 
     return { success: true }
   } catch (error) {
