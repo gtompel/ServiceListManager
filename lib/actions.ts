@@ -6,6 +6,7 @@ import { slugify } from "./utils"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { hash } from "bcryptjs"
+import { canEditPost } from "@/lib/auth"
 
 export async function registerUser(name: string, email: string, password: string) {
   // Проверяем, существует ли пользователь с таким email
@@ -123,6 +124,7 @@ export async function createPost(formData: FormData) {
     revalidatePath("/dashboard")
     revalidatePath("/dashboard/posts")
     revalidatePath("/dashboard/drafts")
+    revalidatePath("/admin/posts")
 
     return post
   } catch (error) {
@@ -138,6 +140,12 @@ export async function updatePost(postId: string, formData: FormData) {
     throw new Error("Вы должны войти в систему для обновления публикации")
   }
 
+  // Проверяем права на редактирование
+  const hasEditRights = await canEditPost(session.user.email, postId)
+  if (!hasEditRights) {
+    throw new Error("У вас нет прав для редактирования этой публикации")
+  }
+
   const title = formData.get("title") as string
   const content = formData.get("content") as string
   const excerpt = (formData.get("excerpt") as string) || content.substring(0, 150) + "..."
@@ -147,15 +155,7 @@ export async function updatePost(postId: string, formData: FormData) {
   const categoryIds = formData.getAll("categories") as string[]
   const tagIds = formData.getAll("tags") as string[]
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  })
-
-  if (!user) {
-    throw new Error("Пользователь не найден")
-  }
-
-  // Проверяем, принадлежит ли публикация пользователю
+  // Проверяем, существует ли публикация
   const post = await prisma.post.findUnique({
     where: { id: postId },
     include: {
@@ -166,10 +166,6 @@ export async function updatePost(postId: string, formData: FormData) {
 
   if (!post) {
     throw new Error("Публикация не найдена")
-  }
-
-  if (post.authorId !== user.id) {
-    throw new Error("У вас нет прав для редактирования этой публикации")
   }
 
   try {
@@ -207,6 +203,7 @@ export async function updatePost(postId: string, formData: FormData) {
     revalidatePath("/dashboard/posts")
     revalidatePath("/dashboard/drafts")
     revalidatePath(`/dashboard/posts/${postId}`)
+    revalidatePath("/admin/posts")
 
     return updatedPost
   } catch (error) {
@@ -215,7 +212,7 @@ export async function updatePost(postId: string, formData: FormData) {
   }
 }
 
-// Добавляем функцию для публикации черновика
+// Обновляем функцию для публикации черновика
 export async function publishPost(postId: string) {
   const session = await getServerSession(authOptions)
 
@@ -223,25 +220,19 @@ export async function publishPost(postId: string) {
     throw new Error("Вы должны войти в систему для публикации")
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  })
-
-  if (!user) {
-    throw new Error("Пользователь не найден")
+  // Проверяем права на редактирование
+  const hasEditRights = await canEditPost(session.user.email, postId)
+  if (!hasEditRights) {
+    throw new Error("У вас нет прав для публикации этой записи")
   }
 
-  // Проверяем, принадлежит ли публикация пользователю
+  // Проверяем, существует ли публикация
   const post = await prisma.post.findUnique({
     where: { id: postId },
   })
 
   if (!post) {
     throw new Error("Публикация не найдена")
-  }
-
-  if (post.authorId !== user.id) {
-    throw new Error("У вас нет прав для публикации этой записи")
   }
 
   try {
@@ -259,6 +250,7 @@ export async function publishPost(postId: string) {
     revalidatePath("/dashboard/posts")
     revalidatePath("/dashboard/drafts")
     revalidatePath(`/dashboard/posts/${postId}`)
+    revalidatePath("/admin/posts")
 
     return updatedPost
   } catch (error) {
@@ -267,7 +259,7 @@ export async function publishPost(postId: string) {
   }
 }
 
-// Добавляем функцию для отмены публикации (перевод в черновики)
+// Обновляем функцию для отмены публикации
 export async function unpublishPost(postId: string) {
   const session = await getServerSession(authOptions)
 
@@ -275,25 +267,19 @@ export async function unpublishPost(postId: string) {
     throw new Error("Вы должны войти в систему для отмены публикации")
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  })
-
-  if (!user) {
-    throw new Error("Пользователь не найден")
+  // Проверяем права на редактирование
+  const hasEditRights = await canEditPost(session.user.email, postId)
+  if (!hasEditRights) {
+    throw new Error("У вас нет прав для отмены публикации этой записи")
   }
 
-  // Проверяем, принадлежит ли публикация пользователю
+  // Проверяем, существует ли публикация
   const post = await prisma.post.findUnique({
     where: { id: postId },
   })
 
   if (!post) {
     throw new Error("Публикация не найдена")
-  }
-
-  if (post.authorId !== user.id) {
-    throw new Error("У вас нет прав для отмены публикации этой записи")
   }
 
   try {
@@ -311,6 +297,7 @@ export async function unpublishPost(postId: string) {
     revalidatePath("/dashboard/posts")
     revalidatePath("/dashboard/drafts")
     revalidatePath(`/dashboard/posts/${postId}`)
+    revalidatePath("/admin/posts")
 
     return updatedPost
   } catch (error) {
@@ -326,24 +313,19 @@ export async function deletePost(postId: string) {
     throw new Error("Вы должны войти в систему для удаления публикации")
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  })
-
-  if (!user) {
-    throw new Error("Пользователь не найден")
+  // Проверяем права на редактирование
+  const hasEditRights = await canEditPost(session.user.email, postId)
+  if (!hasEditRights) {
+    throw new Error("У вас нет прав для удаления этой публикации")
   }
 
+  // Проверяем, существует ли публикация
   const post = await prisma.post.findUnique({
     where: { id: postId },
   })
 
   if (!post) {
     throw new Error("Публикация не найдена")
-  }
-
-  if (post.authorId !== user.id) {
-    throw new Error("У вас нет прав для удаления этой публикации")
   }
 
   try {
@@ -356,6 +338,7 @@ export async function deletePost(postId: string) {
     revalidatePath("/dashboard")
     revalidatePath("/dashboard/posts")
     revalidatePath("/dashboard/drafts")
+    revalidatePath("/admin/posts")
 
     return { success: true }
   } catch (error) {

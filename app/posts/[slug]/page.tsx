@@ -7,7 +7,9 @@ import TagBadge from "@/components/TagBadge"
 import { notFound } from "next/navigation"
 
 export default async function PostPage({ params }: { params: { slug: string } }) {
-  const post = await getPostBySlug(params.slug)
+
+  const slug = params.slug
+  const post = await getPostBySlug(slug)
 
   if (!post) {
     notFound()

@@ -3,6 +3,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect, notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import PostForm from "@/components/PostForm"
+import { canEditPost } from "@/lib/auth"
 
 export default async function EditPostPage({ params }: { params: { id: string } }) {
   // Дожидаемся params перед использованием его свойств
@@ -14,12 +15,10 @@ export default async function EditPostPage({ params }: { params: { id: string } 
     redirect("/login?callbackUrl=/dashboard/posts/" + id)
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  })
-
-  if (!user) {
-    redirect("/login")
+  // Проверяем права на редактирование
+  const hasEditRights = await canEditPost(session.user.email, id)
+  if (!hasEditRights) {
+    redirect("/dashboard")
   }
 
   const post = await prisma.post.findUnique({
@@ -27,16 +26,18 @@ export default async function EditPostPage({ params }: { params: { id: string } 
     include: {
       categories: true,
       tags: true,
+      author: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
     },
   })
 
   if (!post) {
     notFound()
-  }
-
-  // Проверяем, принадлежит ли публикация пользователю
-  if (post.authorId !== user.id) {
-    redirect("/dashboard")
   }
 
   // Получаем все категории и теги для формы
@@ -55,6 +56,13 @@ export default async function EditPostPage({ params }: { params: { id: string } 
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Редактировать публикацию</h1>
+      {post.author.email !== session.user.email && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-md mb-6">
+          <p>
+            <strong>Внимание:</strong> Вы редактируете публикацию пользователя {post.author.name} ({post.author.email})
+          </p>
+        </div>
+      )}
       <PostForm post={post} categories={categories} tags={tags} />
     </div>
   )

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import {
@@ -18,6 +18,15 @@ export function UserNav() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    if (session?.user?.email === "admin@example.com") {
+      setIsAdmin(true)
+    } else {
+      setIsAdmin(false)
+    }
+  }, [session])
 
   if (status === "loading") {
     return <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
@@ -53,6 +62,7 @@ export function UserNav() {
           <div className="flex flex-col space-y-1 leading-none">
             {user?.name && <p className="font-medium">{user.name}</p>}
             {user?.email && <p className="w-[200px] truncate text-sm text-gray-600">{user.email}</p>}
+            {isAdmin && <p className="text-sm font-medium text-blue-600">Администратор</p>}
           </div>
         </div>
         <DropdownMenuSeparator />
@@ -71,6 +81,19 @@ export function UserNav() {
         <DropdownMenuItem asChild>
           <Link href="/dashboard/profile">Профиль</Link>
         </DropdownMenuItem>
+
+        {isAdmin && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/admin/posts">Управление публикациями</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/admin/users">Управление пользователями</Link>
+            </DropdownMenuItem>
+          </>
+        )}
+
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer"

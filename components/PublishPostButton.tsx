@@ -54,7 +54,7 @@ export function PublishPostButton({ postId, isPublished = false }: PublishPostBu
           <AlertDialogDescription>
             {isPublished
               ? "Запись будет скрыта от читателей и перемещена в черновики."
-              : "Запись станет до��тупна для всех читателей."}
+              : "Запись станет доступна для всех читателей."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
