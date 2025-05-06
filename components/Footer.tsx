@@ -31,6 +31,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/tags" className="text-gray-600 hover:text-gray-900">
+                  Теги
+                </Link>
+              </li>
+              <li>
                 <Link href="/about" className="text-gray-600 hover:text-gray-900">
                   О нас
                 </Link>

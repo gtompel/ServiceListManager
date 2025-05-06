@@ -34,6 +34,8 @@ export async function getPosts(limit = 10) {
           },
         },
       },
+      // Добавляем опцию, чтобы избежать кэширования
+      cacheStrategy: { ttl: 0 } as any,
     })
   } catch (error) {
     console.error("Ошибка при получении публикаций:", error)
@@ -82,6 +84,7 @@ export async function getPostBySlug(slug: string) {
           },
         },
       },
+
     })
   } catch (error) {
     console.error("Ошибка при получении публикации:", error)
@@ -184,7 +187,6 @@ export async function getPostsByTag(tagSlug: string, limit = 10) {
     return []
   }
 }
-
 export async function getAllCategories() {
   try {
     return await prisma.category.findMany({

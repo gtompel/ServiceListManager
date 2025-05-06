@@ -1,7 +1,6 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
 import { prisma } from "./prisma"
 import { slugify } from "./utils"
 import { getServerSession } from "next-auth"
@@ -33,6 +32,32 @@ export async function registerUser(name: string, email: string, password: string
   return user
 }
 
+export async function updateProfile(name: string, bio: string | null, image: string | null) {
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user?.email) {
+    throw new Error("Вы должны войти в систему для обновления профиля")
+  }
+
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { email: session.user.email },
+      data: {
+        name,
+        bio,
+        image,
+      },
+    })
+
+    revalidatePath("/dashboard/profile")
+    return updatedUser
+  } catch (error) {
+    console.error("Ошибка при обновлении профиля:", error)
+    throw new Error("Не удалось обновить профиль")
+  }
+}
+
+// Исправляем функцию createPost, чтобы публикации корректно отображались
 export async function createPost(formData: FormData) {
   const session = await getServerSession(authOptions)
 
@@ -94,8 +119,35 @@ export async function createPost(formData: FormData) {
       },
     })
 
-    revalidatePath("/")
-    revalidatePath("/posts")
+    // Более агрессивная ревалидация путей
+    revalidatePath("/", "layout")
+    revalidatePath("/posts", "layout")
+    revalidatePath("/dashboard", "layout")
+    revalidatePath("/dashboard/posts", "layout")
+    revalidatePath(`/posts/${post.slug}`, "layout")
+    revalidatePath("/categories", "layout")
+    revalidatePath("/tags", "layout")
+
+    // Ревалидация для каждой категории и тега
+    for (const categoryId of categoryIds) {
+      const category = await prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { slug: true },
+      })
+      if (category) {
+        revalidatePath(`/categories/${category.slug}`, "layout")
+      }
+    }
+
+    for (const tagId of tagIds) {
+      const tag = await prisma.tag.findUnique({
+        where: { id: tagId },
+        select: { slug: true },
+      })
+      if (tag) {
+        revalidatePath(`/tags/${tag.slug}`, "layout")
+      }
+    }
 
     return post
   } catch (error) {
@@ -104,6 +156,7 @@ export async function createPost(formData: FormData) {
   }
 }
 
+// Аналогично обновляем функцию updatePost для более агрессивной ревалидации
 export async function updatePost(postId: string, formData: FormData) {
   const session = await getServerSession(authOptions)
 
@@ -132,8 +185,16 @@ export async function updatePost(postId: string, formData: FormData) {
   const post = await prisma.post.findUnique({
     where: { id: postId },
     include: {
-      categories: true,
-      tags: true,
+      categories: {
+        include: {
+          category: true,
+        },
+      },
+      tags: {
+        include: {
+          tag: true,
+        },
+      },
     },
   })
 
@@ -173,9 +234,45 @@ export async function updatePost(postId: string, formData: FormData) {
       },
     })
 
-    revalidatePath("/")
-    revalidatePath("/posts")
-    revalidatePath(`/posts/${post.slug}`)
+    // Более агрессивная ревалидация путей
+    revalidatePath("/", "layout")
+    revalidatePath("/posts", "layout")
+    revalidatePath(`/posts/${post.slug}`, "layout")
+    revalidatePath("/dashboard", "layout")
+    revalidatePath("/dashboard/posts", "layout")
+    revalidatePath(`/dashboard/posts/${postId}`, "layout")
+    revalidatePath("/categories", "layout")
+    revalidatePath("/tags", "layout")
+
+    // Ревалидация для старых категорий и тегов
+    for (const categoryItem of post.categories) {
+      revalidatePath(`/categories/${categoryItem.category.slug}`, "layout")
+    }
+
+    for (const tagItem of post.tags) {
+      revalidatePath(`/tags/${tagItem.tag.slug}`, "layout")
+    }
+
+    // Ревалидация для новых категорий и тегов
+    for (const categoryId of categoryIds) {
+      const category = await prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { slug: true },
+      })
+      if (category) {
+        revalidatePath(`/categories/${category.slug}`, "layout")
+      }
+    }
+
+    for (const tagId of tagIds) {
+      const tag = await prisma.tag.findUnique({
+        where: { id: tagId },
+        select: { slug: true },
+      })
+      if (tag) {
+        revalidatePath(`/tags/${tag.slug}`, "layout")
+      }
+    }
 
     return updatedPost
   } catch (error) {
@@ -218,8 +315,10 @@ export async function deletePost(postId: string) {
 
     revalidatePath("/")
     revalidatePath("/posts")
+    revalidatePath("/dashboard")
+    revalidatePath("/dashboard/posts")
 
-    redirect("/dashboard")
+    return { success: true }
   } catch (error) {
     console.error("Ошибка при удалении публикации:", error)
     throw new Error("Не удалось удалить публикацию")

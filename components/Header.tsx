@@ -19,6 +19,9 @@ export default function Header() {
           <Link href="/categories" className="hover:text-gray-600">
             Категории
           </Link>
+          <Link href="/tags" className="hover:text-gray-600">
+            Теги
+          </Link>
           <Link href="/about" className="hover:text-gray-600">
             О нас
           </Link>
