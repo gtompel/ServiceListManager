@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import { compare } from "bcryptjs"
+import { authOptions } from '@/lib/auth'
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -72,4 +73,10 @@ export const authOptions: NextAuthOptions = {
 }
 
 const handler = NextAuth(authOptions)
-export { handler as GET, handler as POST }
+
+export const GET = handler
+export const POST = handler
+
+// Увеличиваем таймаут для API роутов
+export const runtime = 'nodejs'
+export const maxDuration = 60 // 60 секунд
